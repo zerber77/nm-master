@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Памятники — Наугорская мастерская</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link href="../fonts/font-awesome/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div data-include="/partials/header.html"></div>
+
+    <main>
+        <section class="cars-section" style="padding-top: 120px;">
+            <div class="container">
+                <h2 class="section-title">Изготовление памятников</h2>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all">Все</button>
+                    <button class="filter-btn" data-filter="mramor">Мрамор</button>
+                    <button class="filter-btn" data-filter="granit">Гранит</button>
+                    <button class="filter-btn" data-filter="komplex">Комплексы</button>
+                    <button class="filter-btn" data-filter="cool_ofrml">Сложное оформление</button>
+                </div>
+                <div class="cars-grid" id="carsGrid"></div>
+            </div>
+        </section>
+    </main>
+
+    <div data-include="/partials/footer.html"></div>
+
+    <script type="module" src="/include.js" defer></script>
+    <script type="module" src="/script.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,19 @@
+{
+    "name": "vite-starter",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "devDependencies": {
+        "vite": "^6.2.0"
+    },
+    "dependencies": {
+        "lodash": "^4.17.21",
+        "morphdom": "^2.7.4",
+        "vue": "^3.5.13"
+    }
+}
