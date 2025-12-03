@@ -265,7 +265,7 @@ body {
     flex: 1;
     position: relative;
     z-index: 2;
-    padding-right: 40px;
+    padding:120px 40px;
 }
 
 .car-slider {
@@ -904,7 +904,7 @@ body {
     }
 
     .hero-image {
-        padding-right: 0;
+        padding:0 0;
         width: 100%;
     }
 
