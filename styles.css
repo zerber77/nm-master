@@ -8,6 +8,17 @@
         url(/fonts/benguiat-bold.woff) format('woff');
 }
 
+@font-face {
+    font-family: 'AGOpus';
+    font-style: normal;
+    font-weight: 800;
+    src: local('AGOpus'), local('AGOpus'),
+        url(/fonts/AGOpus.woff) format('woff'),
+        url(/fonts/AGOpus.ttf) format('truetype');
+}
+
+
+
 * {
     margin: 0;
     padding: 0;
@@ -19,7 +30,7 @@ html {
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'AGOpus', arial;
     line-height: 1.6;
     color: #333;
     overflow-x: hidden;
