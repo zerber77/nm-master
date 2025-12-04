@@ -79,7 +79,6 @@ function initHeaderInteractions() {
         // Закрываем dropdown и мобильное меню при клике на ссылку
         link.addEventListener('click', () => {
             if (dropdown) {
-                debugger
                 dropdown.classList.remove('active');
             }
             if (hamburger && navMenu) {
@@ -88,11 +87,17 @@ function initHeaderInteractions() {
             }
         });
     });
+
+    const logo = document.querySelector('.logo');
+    logo?.addEventListener('dblclick', () => {
+        window.location.href = '/master/'
+    })
 }
 window.addEventListener('header:loaded', initHeaderInteractions);
 document.addEventListener('DOMContentLoaded', initHeaderInteractions);
 const dots = document.querySelectorAll('.dot');
 const contactForm = document.getElementById('contactForm');
+
 
 // Плавная прокрутка для навигационных ссылок (для якорей)
 document.addEventListener('click', (e) => {
@@ -188,7 +193,8 @@ if (contactForm) contactForm.addEventListener('submit', async (e) => {
     submitBtn.disabled = true;
 
     try {
-        const response = await fetch('feedback.php', {
+        debugger
+        const response = await fetch('http://master-vite/contacts/feedback.php', {
             method: 'POST',
             body: formData
         });

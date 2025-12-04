@@ -14,6 +14,7 @@ export default {
         products: resolve(__dirname, 'products/index.html'),
         contacts: resolve(__dirname, 'contacts/index.html'),
         about: resolve(__dirname, 'about/index.html'),
+        master: resolve(__dirname, 'master/index.html'),
         services: resolve(__dirname, 'services/index.html'),
         servicesOformlenie: resolve(__dirname, 'services/oformlenie/index.html'),
         blagoustroistvo: resolve(__dirname, 'services/blagoustroistvo/index.html'),

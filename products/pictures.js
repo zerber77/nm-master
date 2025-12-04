@@ -108,7 +108,6 @@ export function attachOrderButtonHandlers() {
 	buyButtons.forEach(button => {
 		button.addEventListener('click', (e) => {
 			e.stopPropagation();
-			debugger
 			const name = button.getAttribute('data-alt');
 //			const name = document.querySelector('.car-info h3').textContent.trim()
 			// Импортируем функцию открытия модального окна с изображением из script.js
