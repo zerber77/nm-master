@@ -1178,14 +1178,15 @@ body {
     width: 100%;
     height: 100%;
     z-index: 10000;
-    display: none;
+    visibility: hidden;
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 1s ease;
 }
 
 .image-modal.active {
+    visibility: visible;
     display: flex;
     opacity: 1;
 }
@@ -1204,12 +1205,12 @@ body {
     position: relative;
     max-width: 95%;
     z-index: 10001;
-    transform: scale(0.9);
-    transition: transform 0.3s ease;
+    transform: scale(0.9) rotate(90deg);
+    transition: transform 1s ease;
 }
 
 .image-modal.active .image-modal-content {
-    transform: scale(1);
+    transform: scale(1) rotate(0deg);
 }
 
 .image-modal-content img {

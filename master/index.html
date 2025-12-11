@@ -4,26 +4,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Акции — AutoMax</title>
+    <title>Админ-панель • Наугорская мастерская</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="../fonts/font-awesome/all.min.css" rel="stylesheet">
+    <link href="/fonts/font-awesome/all.min.css" rel="stylesheet">
     <link rel="icon" href="#">
 </head>
 
 <body>
-    <main>
-        <section class="promo-section">
-            <div class="container">
-                <h4>Быстрые ссылки</h4>
-                <ul>
-                    <li><a href="/">Главная</a></li>
-                    <li><a href="/products/">Памятники</a></li>
-                    <li><a href="/about/">О нас</a></li>
-                    <li><a href="/promo/">Акции</a></li>
-                </ul>
+    <main class="admin-layout hidden" id="adminLayout">
+        <aside class="left-panel" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Свернуть меню">
+                    <i class="fa fa-bars"></i>
+                </button>
+                <div class="sidebar-title">Админ-панель</div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-link" href="/" data-action="home">
+                    <i class="fa fa-home"></i>
+                    <span>ГЛАВНАЯ</span>
+                </a>
+                <button class="nav-link" type="button" data-action="orders">
+                    <i class="fa fa-clipboard-list"></i>
+                    <span>ЗАКАЗЫ</span>
+                </button>
+                <button class="nav-link" type="button" data-action="messages">
+                    <i class="fa fa-envelope"></i>
+                    <span>СООБЩЕНИЯ</span>
+                </button>
+            </nav>
+        </aside>
+
+        <div class="mobile-overlay" id="mobileOverlay"></div>
+
+        <section class="content" id="content">
+            <header class="content-header">
+                <div>
+                    <p class="eyebrow">Панель управления</p>
+                    <h1>Выберите раздел</h1>
+                </div>
+                <div class="status-badge" id="statusBadge">Ожидаю действия…</div>
+            </header>
+
+            <div class="content-body">
+                <div class="empty-state">
+                    <i class="fa fa-columns"></i>
+                    <p>Нажмите «Заказы» или «Сообщения», чтобы загрузить данные с сервера.</p>
+                    <small>При клике на «Главная» откроется основной сайт.</small>
+                </div>
             </div>
         </section>
     </main>
+
     <script type="module" src="script.js"></script>
 </body>
 

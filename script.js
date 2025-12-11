@@ -194,7 +194,7 @@ if (contactForm) contactForm.addEventListener('submit', async (e) => {
 
     try {
         debugger
-        const response = await fetch('http://master-vite/contacts/feedback.php', {
+        const response = await fetch('/api/feedback/postFeedback/', {
             method: 'POST',
             body: formData
         });
