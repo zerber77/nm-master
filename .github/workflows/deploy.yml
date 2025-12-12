@@ -15,8 +15,8 @@ jobs:
         run: npm ci
       - name: Build app
         run: npm run build
-      # - name: Copy api
-      #   run: sudo cp -rf /home/runner/work/quasar-test/quasar-test/api /home/runner/work/quasar-test/quasar-test/dist/spa/
+      - name: Copy api
+        run: sudo cp -rf /home/runner/work/nm-master/nm-master/api /home/runner/work/nm-master/nm-master/dist/
       # - name: mkdir src
       #   run: sudo mkdir /home/runner/work/quasar-test/quasar-test/dist/spa/src
       # - name: mkdir assets
