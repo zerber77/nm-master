@@ -59,7 +59,7 @@ function sendPassword() {
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch('http://master-vite/master/login.php', {
+                const response = await fetch('/api/auth/login/', {
                     method: 'POST',
                     body: formData
                 });
@@ -82,8 +82,8 @@ function sendPassword() {
 
 // ========== АДМИН-ПАНЕЛЬ ==========
 const API_MAP = {
-    orders: 'http://master-vite/master/orders.php',
-    messages: 'http://master-vite/api/feedback/getFeedback/',
+    orders: '/api/orders/getOrders/',
+    messages: '/api/feedback/getFeedback/',
 };
 
 const statusBadge = document.getElementById('statusBadge');

@@ -55,7 +55,7 @@ if ($phone !== '' && !preg_match('/^\+7-\d{3}-\d{3}-\d{2}-\d{2}$/', $phone)) {
 
 
 // Проверка количества сообщений от этого IP за последние 24 часа
-$maxMessagesPerDay = 3; // Лимит сообщений в сутки
+$maxMessagesPerDay = 5; // Лимит сообщений в сутки
 $stmt = $conn->prepare("SELECT COUNT(*) as count FROM feedback WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)");
 if (!$stmt) {
     respond(false, 'Ошибка подготовки запроса');
