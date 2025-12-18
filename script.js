@@ -96,8 +96,6 @@ function initHeaderInteractions() {
 window.addEventListener('header:loaded', initHeaderInteractions);
 document.addEventListener('DOMContentLoaded', initHeaderInteractions);
 const dots = document.querySelectorAll('.dot');
-const contactForm = document.getElementById('contactForm');
-
 
 // Плавная прокрутка для навигационных ссылок (для якорей)
 document.addEventListener('click', (e) => {
@@ -160,96 +158,38 @@ dots.forEach((dot, index) => {
 });
 
 
-// Обработка формы обратной связи
-if (contactForm) contactForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(contactForm);
-    const name = formData.get('name');
-    const email = formData.get('email');
-    const phone = formData.get('phone');
-    const message = formData.get('message');
-
-    // Базовая проверка обязательных полей
-    if (!name || !email || !message) {
-        showNotification('Пожалуйста, заполните все обязательные поля', 'error');
-        return;
-    }
-
-    // Валидация телефона: +7-xxx-xxx-xx-xx
-    const phonePattern = /^\+7-\d{3}-\d{3}-\d{2}-\d{2}$/;
-    if (phone && !phonePattern.test(phone)) {
-        showNotification('Пожалуйста, введите телефон в формате +7-xxx-xxx-xx-xx', 'error');
-        return;
-    }
-
-    if (!isValidEmail(email)) {
-        showNotification('Пожалуйста, введите корректный email адрес', 'error');
-        return;
-    }
-
-    const submitBtn = contactForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.innerHTML = '<span class="loading"></span> Отправка...';
-    submitBtn.disabled = true;
-
-    try {
-        debugger
-        const response = await fetch('/api/feedback/postFeedback/', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await response.json();
-        if (data.success) {
-            showNotification(data.message || 'Сообщение успешно отправлено! Мы свяжемся с вами в ближайшее время.', 'success');
-            contactForm.reset();
-        } else {
-            showNotification(data.message || 'Ошибка при отправке сообщения', 'error');
-        }
-    } catch (err) {
-        showNotification('Ошибка связи с сервером.', 'error');
-    }
-    submitBtn.textContent = originalText;
-    submitBtn.disabled = false;
-});
-
-// Проверка email
-function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-}
-
 // Система уведомлений
-function showNotification(message, type = 'info') {
-    // Удаляем предыдущие уведомления
-    const existingNotification = document.querySelector('.notification');
-    if (existingNotification) {
-        existingNotification.remove();
-    }
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <span class="notification-message">${message}</span>
-            <button class="notification-close">&times;</button>
-        </div>
-    `;
-    // Добавляем стили
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 25px;
-        z-index: 10000;`;
-    document.body.appendChild(notification);
-    // Кнопка закрытия уведомления
-    notification.querySelector('.notification-close').onclick = () => notification.remove();
-    // Автоматическое скрытие через 5 секунд
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.style.animation = 'slideOutRight 0.3s ease-in';
-            setTimeout(() => notification.remove(), 300);
-        }
-    }, 5000);
-}
+// function showNotification(message, type = 'info') {
+//     // Удаляем предыдущие уведомления
+//     const existingNotification = document.querySelector('.notification');
+//     if (existingNotification) {
+//         existingNotification.remove();
+//     }
+//     const notification = document.createElement('div');
+//     notification.className = `notification notification-${type}`;
+//     notification.innerHTML = `
+//         <div class="notification-content">
+//             <span class="notification-message">${message}</span>
+//             <button class="notification-close">&times;</button>
+//         </div>
+//     `;
+//     // Добавляем стили
+//     notification.style.cssText = `
+//         position: fixed;
+//         top: 20px;
+//         right: 25px;
+//         z-index: 10000;`;
+//     document.body.appendChild(notification);
+//     // Кнопка закрытия уведомления
+//     notification.querySelector('.notification-close').onclick = () => notification.remove();
+//     // Автоматическое скрытие через 5 секунд
+//     setTimeout(() => {
+//         if (notification.parentNode) {
+//             notification.style.animation = 'slideOutRight 0.3s ease-in';
+//             setTimeout(() => notification.remove(), 300);
+//         }
+//     }, 5000);
+// }
 
 // Анимация элементов при прокрутке
 function handleScrollAnimations() {
