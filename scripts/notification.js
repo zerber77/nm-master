@@ -16,17 +16,34 @@ export function showNotification(message, type = 'info') {
     // Добавляем стили
     notification.style.cssText = `
         position: fixed;
-        top: 20px;
-        right: 25px;
+        top: 100px;
+        right: 0px;
         z-index: 10000;`;
     document.body.appendChild(notification);
     // Кнопка закрытия уведомления
-    notification.querySelector('.notification-close').onclick = () => notification.remove();
+    notification.querySelector('.notification-close').onclick = () => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 2000); // Ждем завершения анимации
+    };
+    
+    // Добавляем класс show для отображения уведомления с анимацией
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
     // Автоматическое скрытие через 5 секунд
     setTimeout(() => {
         if (notification.parentNode) {
-            notification.style.animation = 'slideOutRight 0.3s ease-in';
-            setTimeout(() => notification.remove(), 300);
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 2000); // Ждем завершения анимации
         }
     }, 5000);
 }

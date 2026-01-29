@@ -2,8 +2,11 @@ import {mramor} from './img-objects/mramor.js';
 import {granit} from './img-objects/granit.js';
 import {komplex} from './img-objects/komplex.js';
 import {cool_ofrml} from './img-objects/cool_ofrml.js';
+import {sendOrder} from './order.js';
+import {phoneValidation, phonePaste, phoneFocus} from '/scripts/phoneValidation.js';
+import {lazyLoadImages} from '/scripts/lazyLoadImg.js';
 const allData = [...mramor, ...granit, ...komplex, ...cool_ofrml]//, 
-// Рендер карточек автомобилей из allData
+// Рендер карточек  из allData
 export function renderCars(data, lazyLoadCallback) {
 	const carsGrid = document.getElementById('carsGrid');
 	if (!carsGrid) return;
@@ -52,7 +55,7 @@ export function attachCardHoverHandlers() {
 	});
 }
 
-// Инициализация фильтрации автомобилей
+// Инициализация фильтрации 
 export function initCarFilters() {
 	const filterButtons = document.querySelectorAll('.filter-btn');
 	if (filterButtons && filterButtons.length) {
@@ -86,6 +89,8 @@ export function initCars(lazyLoadCallback) {
 	});
 }
 
+initCars(lazyLoadImages);
+
 // Навешиваем обработчики на кнопки увеличения изображения
 export function attachZoomButtonHandlers() {
 	const zoomButtons = document.querySelectorAll('.zoom-btn');
@@ -102,15 +107,85 @@ export function attachZoomButtonHandlers() {
 	});
 }
 
-// Навешиваем обработчики на кнопки увеличения изображения
+
+// Модальное окно для увеличенного изображения
+function initOrderModal() {
+    // Создаем модальное окно
+    const modal = document.createElement('div');
+    modal.className = 'order-modal';
+    modal.innerHTML = `
+        <div class="order-modal-overlay"></div>
+        <div class="order-modal-content">
+                <div class="contact-form" style="width:100% !important">
+                    <h2 class="section-title">Заказ</h2>
+                    <button class="order-modal-close">&times;</button>
+                        <form id="orderForm">
+                            <div class="form-group">
+                                <input type="text" id="order" name="order"  required>
+                            </div>
+							<div class="form-group">
+                                <input type="text" id="name" name="name" placeholder="Ваше имя" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="email" id="email" name="email" placeholder="Ваш email" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="tel" id="phone" name="phone" placeholder="Ваш телефон">
+                                <div id="phone-error" style="color: red; display: none; font-size: 13px; margin-top: 3px;">ТОЛЬКО ЦИФРЫ</div>
+                            </div>
+                            <div class="form-group">
+                                <textarea id="message" name="message" placeholder="Ваше сообщение" rows="5" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary center-btn">Отправить сообщение</button>
+                        </form>
+                    </div>
+                </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const orderField = modal.querySelector('input[name="order"]');
+
+    // Функция открытия модального окна
+    window.openOrderModal = function(orderName) {
+        orderField.value = orderName;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+
+    // Функция закрытия модального окна
+    function closeOrderModal() {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    
+	///обработка клика по кнопке заказа
+	const orderForm = modal.querySelector('#orderForm')
+	phoneValidation()
+	phoneFocus()
+	phonePaste()
+	orderForm.addEventListener('submit', sendOrder);
+    // Закрытие по клику на overlay или кнопку закрытия
+    modal.querySelector('.order-modal-overlay').addEventListener('click', closeOrderModal);
+    modal.querySelector('.order-modal-close').addEventListener('click', closeOrderModal);
+    // Закрытие по Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeOrderModal();
+        }
+    });
+}
+
+// Инициализация модального окна для заказа
+document.addEventListener('DOMContentLoaded', initOrderModal);
+
+// Навешиваем обработчики на кнопки заказа
 export function attachOrderButtonHandlers() {
 	const buyButtons = document.querySelectorAll('.buy-btn');
 	buyButtons.forEach(button => {
 		button.addEventListener('click', (e) => {
 			e.stopPropagation();
 			const name = button.getAttribute('data-alt');
-//			const name = document.querySelector('.car-info h3').textContent.trim()
-			// Импортируем функцию открытия модального окна с изображением из script.js
 			if (window.openOrderModal) {
 				window.openOrderModal(name);
 			}

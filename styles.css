@@ -716,7 +716,8 @@ body {
 }
 
 .center-btn{
-    text-align: center;
+    display: block;
+    margin: 0 auto;
 }
 
 .form-group {
@@ -1117,58 +1118,10 @@ body {
     margin-top: auto;
 }
 
-/* Scroll to Top Button */
-.scroll-to-top {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 50px;
-    height: 50px;
-    background: linear-gradient(to right, rgb(235, 128, 46), rgb(228, 173, 131));
-    color: white;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    z-index: 999;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
-    opacity: 0;
-    transform: translateY(20px);
-}
-
-.scroll-to-top.show {
-    display: flex;
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.scroll-to-top:hover {
-    background: linear-gradient(to right, rgb(228, 173, 131), rgb(235, 128, 46));
-    transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-}
-
-.scroll-to-top:active {
-    transform: translateY(-2px);
-}
-
 @media (max-width: 768px) {
     .promo-grid { grid-template-columns: 1fr; }
     .promo-section { padding: 60px 0; }
-    /* Scroll to Top Button */
-    .scroll-to-top {
-        bottom: 20px;
-        right: 10px;
-        width: 45px;
-        height: 45px;
-        font-size: 18px;
-    }
 }
-
 
 /* Модальное окно для увеличенного изображения */
 .image-modal {

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Личный кабинет</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/css/notifications.css" />
+  <link rel="stylesheet" href="/dist/fonts/font-awesome/css/all.min.css" />
+</head>
+<body>
+  <div data-include="/partials/header.html"></div>
+
+  <main class="container" style="padding: 140px 20px 60px;">
+    <h2>Личный кабинет</h2>
+    <p>Раздел в разработке.</p>
+    <p>
+      <a href="#" id="logoutFromCabinet">Выйти</a>
+    </p>
+  </main>
+
+  <script src="/include.js"></script>
+  <script type="module" src="/script.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('logoutFromCabinet');
+      btn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        localStorage.removeItem('authToken');
+        window.location.href = '/';
+      });
+    });
+  </script>
+</body>
+</html>
+

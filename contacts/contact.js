@@ -1,8 +1,13 @@
 // Обработка формы обратной связи
-import { showNotification } from '/scripts/notification.js';
+import { showNotification } from '/scripts/notification.js'
+import {phoneValidation, phonePaste, phoneFocus} from '/scripts/phoneValidation.js'
+phoneValidation()
+phoneFocus()
+phonePaste()
 const contactForm = document.getElementById('contactForm');
 if (contactForm) contactForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    debugger
     const formData = new FormData(contactForm);
     const name = formData.get('name');
     const email = formData.get('email');

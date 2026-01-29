@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Админ-панель • Наугорская мастерская</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/css/toTop.css">
     <link href="/fonts/font-awesome/all.min.css" rel="stylesheet">
     <link rel="icon" href="#">
 </head>
@@ -58,6 +59,10 @@
     </main>
 
     <script type="module" src="script.js"></script>
+    <script type="module">
+        import { initScrollToTop } from '/scripts/toTop.js';
+        document.addEventListener('DOMContentLoaded', initScrollToTop);
+    </script>
 </body>
 
 </html>

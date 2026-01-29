@@ -12,6 +12,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }));
     window.dispatchEvent(new CustomEvent('header:loaded'));
+    
+    // Явно вызываем initAuthMenu после загрузки header
+    try {
+        const { initAuthMenu } = await import('/scripts/initAuthMenu.js');
+        initAuthMenu();
+    } catch (e) {
+        // Если модуль еще не загружен, он вызовется по событию header:loaded
+        console.warn('initAuthMenu module not ready yet:', e);
+    }
 });
 
 

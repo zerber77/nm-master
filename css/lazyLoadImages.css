@@ -1,0 +1,15 @@
+/* Стили для ленивой загрузки изображений */
+img.lazy {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+img.lazy:not([src]),
+img.lazy[src=""] {
+    background-color: #f0f0f0;
+    min-height: 200px;
+}
+
+img:not(.lazy) {
+    opacity: 1;
+}

@@ -1,0 +1,36 @@
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px; /* Окончательное положение */
+    font-family: inherit;
+    font-size: 25px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    z-index: 10000;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform 2s ease, opacity 2s ease;
+}
+.notification-error{
+    background-color: #ffaeae;
+    border: 2px solid #ff4400;
+}
+
+.notification-success{
+    background-color: #ffbd76;
+    border: 2px solid #df8d6f;
+}
+
+.notification-close{
+    width: 20px;
+    height: 20px; 
+    font-size: 20px;
+    background-color: inherit;
+    border: none;
+    cursor: pointer;
+}
+.show {
+    /* Конечное состояние — въезжает в экран */
+    transform: translateX(0);
+    opacity: 0.9;
+}

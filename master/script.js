@@ -1,3 +1,7 @@
+// ========== ИМПОРТЫ ==========
+import { markAsWritten } from './written.js';
+import { deleteRecord } from './delete.js';
+
 // ========== МОДАЛЬНОЕ ОКНО ВХОДА ==========
 function initPassModal() {
     // Создаем модальное окно
@@ -11,7 +15,10 @@ function initPassModal() {
         <button class="order-modal-close">&times;</button>
             <form id="passwordForm">
                 <div class="form-group">
-                    <input type="text" id="name" name="name" placeholder="Пароль" required>
+                    <input type="text" id="name" name="name" placeholder="Имя" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="pass" name="pass" placeholder="Пароль" required>
                 </div>
                 <p class="message"></p>
                 <button type="submit" class="btn btn-primary">ВОЙТИ</button>
@@ -120,7 +127,7 @@ function sanitizeValue(value) {
     return String(value);
 }
 
-function renderRecords(records, title) {
+function renderRecords(records, title, dataType) {
     if (!Array.isArray(records) || records.length === 0) {
         return `<div class="empty-state"><i class="fa fa-inbox"></i><p>Нет данных для отображения</p></div>`;
     }
@@ -134,15 +141,39 @@ function renderRecords(records, title) {
                 .join(' • ');
 
             const lines = entries
-                .filter(([key]) => !/date|time|created|updated/i.test(key))
+                .filter(([key]) => !/date|time|created|updated|written/i.test(key))
                 .map(([key, val]) => `<div class="card-line"><strong>${key}:</strong><span>${sanitizeValue(val)}</span></div>`)
                 .join('');
 
+            // Проверяем поле written (0 или false = не отработан, 1 или true = отработан)
+            const isWritten = record.written === 1 || record.written === true || record.written === '1';
+            const orderId = record.id || record.ID || null;
+            
+            // Проверяем, что orderId существует
+            if (orderId === null || orderId === undefined) {
+                console.warn('Заказ без ID:', record);
+                console.warn('Доступные ключи:', Object.keys(record));
+            } else {
+                console.log('Заказ ID:', orderId, 'written:', record.written, 'isWritten:', isWritten);
+            }
+            
+            const buttonClass = isWritten ? 'written-btn written-btn-done' : 'written-btn written-btn-pending';
+            const buttonText = isWritten ? 'ОТРАБОТАН' : 'НЕ ОТРАБОТАН';
+            const buttonDisabled = isWritten ? 'disabled' : '';
+
             return `
         <article class="data-card">
+            <button class="delete-btn" data-record-id="${orderId || ''}" data-record-type="${dataType || ''}" title="Удалить">
+                <i class="fa fa-trash"></i>
+            </button>
             <div class="card-title">${title} #${idx + 1}</div>
             <div class="card-meta">${meta || 'Без даты'}</div>
             ${lines}
+            <div class="card-actions">
+                <button class="${buttonClass}" data-order-id="${orderId || ''}" ${buttonDisabled}>
+                    ${buttonText}
+                </button>
+            </div>
         </article>
         `;
         })
@@ -178,12 +209,189 @@ async function fetchData(type) {
             data = data.data;
         }
 
-        setContent(renderRecords(data, type === 'orders' ? 'Заказ' : 'Сообщение'));
+        setContent(renderRecords(data, type === 'orders' ? 'Заказ' : 'Сообщение', type));
         setStatus('Готово');
+        
+        // Инициализируем обработчики кнопок для заказов и сообщений
+        if (type === 'orders' || type === 'messages') {
+            // Используем делегирование событий для избежания дублирования обработчиков
+            initWrittenButtons(type);
+            initDeleteButtons(type);
+        }
     } catch (error) {
         console.error(error);
         setContent(renderError('Не удалось загрузить данные. Проверьте orders.php/messages.php.'));
         setStatus('Ошибка');
+    }
+}
+
+// Инициализация обработчиков кнопок "НЕ ОТРАБОТАН" / "ОТРАБОТАН"
+// Используем делегирование событий для избежания дублирования обработчиков
+let writtenButtonsInitialized = false;
+let currentDataType = null;
+
+function initWrittenButtons(type) {
+    // Используем делегирование событий на контейнере
+    const contentBody = document.querySelector('.content-body');
+    if (!contentBody) return;
+    
+    // Сохраняем текущий тип данных
+    currentDataType = type;
+    
+    // Удаляем старый обработчик, если он был добавлен
+    if (writtenButtonsInitialized) {
+        contentBody.removeEventListener('click', handleWrittenButtonClick);
+    }
+    
+    // Добавляем обработчик на контейнер (делегирование событий)
+    contentBody.addEventListener('click', handleWrittenButtonClick);
+    writtenButtonsInitialized = true;
+}
+
+async function handleWrittenButtonClick(event) {
+    // Проверяем, что клик был по кнопке "НЕ ОТРАБОТАН"
+    const button = event.target.closest('.written-btn-pending:not([disabled])');
+    if (!button) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const orderIdAttr = button.getAttribute('data-order-id');
+    const orderId = orderIdAttr ? parseInt(orderIdAttr, 10) : null;
+    
+    if (!orderId || isNaN(orderId)) {
+        console.error('Неверный orderId:', orderIdAttr, 'Атрибут:', button.getAttribute('data-order-id'));
+        alert('Ошибка: не удалось получить ID заказа. Проверьте консоль для деталей.');
+        return;
+    }
+
+    console.log('Отправка запроса для заказа ID:', orderId);
+
+    // Блокируем кнопку на время запроса
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = 'Обработка...';
+
+    try {
+        // Определяем тип для передачи в markAsWritten
+        // Если currentDataType === 'messages', используем 'feedback', иначе 'orders'
+        const typeForRequest = currentDataType === 'messages' ? 'feedback' : 'orders';
+        const result = await markAsWritten(orderId, typeForRequest);
+        console.log('Результат запроса:', result);
+        
+        if (result.success) {
+            // Обновляем кнопку: делаем её зеленой и заблокированной
+            button.classList.remove('written-btn-pending');
+            button.classList.add('written-btn-done');
+            button.textContent = 'ОТРАБОТАН';
+            button.disabled = true;
+        } else {
+            // Восстанавливаем кнопку при ошибке
+            button.disabled = false;
+            button.textContent = originalText;
+            alert(result.message || 'Ошибка при обновлении статуса заказа');
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        button.disabled = false;
+        button.textContent = originalText;
+        alert('Ошибка при обновлении статуса заказа: ' + (error.message || error));
+    }
+}
+
+// Инициализация обработчиков кнопок удаления
+// Используем делегирование событий для избежания дублирования обработчиков
+let deleteButtonsInitialized = false;
+
+function initDeleteButtons(type) {
+    // Используем делегирование событий на контейнере
+    const contentBody = document.querySelector('.content-body');
+    if (!contentBody) return;
+    
+    // Удаляем старый обработчик, если он был добавлен
+    if (deleteButtonsInitialized) {
+        contentBody.removeEventListener('click', handleDeleteButtonClick);
+    }
+    
+    // Добавляем обработчик на контейнер (делегирование событий)
+    contentBody.addEventListener('click', handleDeleteButtonClick);
+    deleteButtonsInitialized = true;
+}
+
+async function handleDeleteButtonClick(event) {
+    // Проверяем, что клик был по кнопке удаления
+    const deleteButton = event.target.closest('.delete-btn');
+    if (!deleteButton) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const recordIdAttr = deleteButton.getAttribute('data-record-id');
+    const recordType = deleteButton.getAttribute('data-record-type');
+    const recordId = recordIdAttr ? parseInt(recordIdAttr, 10) : null;
+    
+    if (!recordId || isNaN(recordId)) {
+        console.error('Неверный recordId:', recordIdAttr);
+        alert('Ошибка: не удалось получить ID записи. Проверьте консоль для деталей.');
+        return;
+    }
+    
+    if (!recordType) {
+        console.error('Не указан тип записи');
+        alert('Ошибка: не указан тип записи.');
+        return;
+    }
+    
+    // Подтверждение удаления
+    const confirmMessage = recordType === 'orders' ? 'Вы уверены, что хотите удалить этот заказ?' : 'Вы уверены, что хотите удалить это сообщение?';
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    console.log('Отправка запроса на удаление записи ID:', recordId, 'тип:', recordType);
+    
+    // Блокируем кнопку на время запроса
+    deleteButton.disabled = true;
+    const originalHTML = deleteButton.innerHTML;
+    deleteButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+    
+    try {
+        // Определяем тип для передачи в deleteRecord
+        // Если recordType === 'messages', используем 'feedback', иначе 'orders'
+        const typeForRequest = recordType === 'messages' ? 'feedback' : 'orders';
+        const result = await deleteRecord(recordId, typeForRequest);
+        console.log('Результат запроса на удаление:', result);
+        
+        if (result.success) {
+            // Удаляем карточку из DOM
+            const card = deleteButton.closest('.data-card');
+            if (card) {
+                card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    card.remove();
+                    // Проверяем, остались ли карточки
+                    const grid = document.querySelector('.data-grid');
+                    if (grid && grid.children.length === 0) {
+                        const contentBody = document.querySelector('.content-body');
+                        if (contentBody) {
+                            contentBody.innerHTML = '<div class="empty-state"><i class="fa fa-inbox"></i><p>Нет данных для отображения</p></div>';
+                        }
+                    }
+                }, 300);
+            }
+        } else {
+            // Восстанавливаем кнопку при ошибке
+            deleteButton.disabled = false;
+            deleteButton.innerHTML = originalHTML;
+            alert(result.message || 'Ошибка при удалении записи');
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        deleteButton.disabled = false;
+        deleteButton.innerHTML = originalHTML;
+        alert('Ошибка при удалении записи: ' + (error.message || error));
     }
 }
 

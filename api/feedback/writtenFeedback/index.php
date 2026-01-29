@@ -1,0 +1,71 @@
+<?php
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: http://localhost:5173');
+header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
+include __DIR__ . '/../../const.php';
+
+// Обработка OPTIONS запроса для CORS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+// Проверяем метод запроса
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    respond(false, 'Метод не поддерживается');
+}
+
+// Получаем ID сообщения из POST
+$feedbackId = isset($_POST['feedbackId']) ? intval($_POST['feedbackId']) : 0;
+
+// Валидация ID
+if ($feedbackId <= 0) {
+    respond(false, 'Неверный ID сообщения: ' . (isset($_POST['feedbackId']) ? $_POST['feedbackId'] : 'не передан'));
+}
+
+// Сначала проверяем, существует ли сообщение
+$checkStmt = $conn->prepare("SELECT id, written FROM feedback WHERE id = ?");
+if (!$checkStmt) {
+    respond(false, 'Ошибка подготовки запроса проверки: ' . $conn->error);
+}
+$checkStmt->bind_param('i', $feedbackId);
+$checkStmt->execute();
+$result = $checkStmt->get_result();
+$feedback = $result->fetch_assoc();
+$checkStmt->close();
+
+if (!$feedback) {
+    respond(false, 'Сообщение с ID ' . $feedbackId . ' не найдено в базе данных');
+}
+
+// Если сообщение уже отработано, возвращаем успех
+if ($feedback['written'] == 1) {
+    respond(true, 'Сообщение уже было отмечено как отработанное');
+}
+
+// Обновляем поле written на 1
+$stmt = $conn->prepare("UPDATE feedback SET written = 1 WHERE id = ?");
+if (!$stmt) {
+    respond(false, 'Ошибка подготовки запроса обновления: ' . $conn->error);
+}
+
+$stmt->bind_param('i', $feedbackId);
+$ok = $stmt->execute();
+
+if (!$ok) {
+    $stmt->close();
+    respond(false, 'Ошибка выполнения запроса: ' . $stmt->error);
+}
+
+$affectedRows = $stmt->affected_rows;
+$stmt->close();
+
+if ($affectedRows > 0) {
+    respond(true, 'Сообщение отмечено как отработанное');
+} else {
+    // Это не должно произойти, так как мы проверили существование сообщения
+    respond(false, 'Сообщение не было обновлено (affected_rows = 0)');
+}
