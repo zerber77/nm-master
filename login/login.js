@@ -97,15 +97,26 @@ if (loginForm) {
                 showNotification(data.error || 'Ошибка при входе. Проверьте данные.', 'error');
                 return;
             }
+            
             if (data?.token) {
                 localStorage.setItem('authToken', data.token);
                 // Обновляем меню авторизации сразу после сохранения токена
                 initAuthMenu();
+                
+                showNotification('Вход выполнен успешно!', 'success');
+                
+                // Перенаправляем в зависимости от роли пользователя
+                setTimeout(() => {
+                    const userRole = data?.role || 'user';
+                    if (userRole === 'admin') {
+                        window.location.href = '/master/';
+                    } else {
+                        window.location.href = '/cabinet/index.html';
+                    }
+                }, 1500);
+            } else {
+                showNotification('Ошибка при входе. Токен не получен.', 'error');
             }
-            showNotification('Вход выполнен успешно!', 'success');
-            setTimeout(() => {
-                window.location.href = '/';
-            }, 1500);
         } catch (err) {
             console.error('Login error:', err);
             showNotification('Ошибка связи с сервером.', 'error');

@@ -1,9 +1,14 @@
 <?php
-header('Access-Control-Allow-Origin: http://localhost:9000');
+header('Access-Control-Allow-Origin: http://localhost:5173');
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
+// // Обработка preflight запроса для CORS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -19,7 +24,7 @@ $options = [
 ];
 
 try {
-  $pdo = new PDO("mysql:host=$db_analitika;dbname=$dbname_analitika;charset=utf8mb4", $dbuser_analitika, $dbpasswd_analitika, $options);
+      $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, $options);
 } catch (\PDOException $e) {
   throw new \PDOException($e->getMessage(), (int)$e->getCode());
 }
@@ -35,42 +40,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
   }
 
-  $login = $data['login'];
+  $email = trim($data['login']); // login содержит email
   $plainPassword = $data['password'];
 
-  // Проверяем существование пользователя с указанным логином
+  // Проверяем существование пользователя с указанным email
   try {
-    $stmt = $pdo->prepare("SELECT user_id, name, password FROM users WHERE login = :login");
-    $stmt->execute(['login' => $login]);
-  }catch (\PDOException $e) {
-    echo json_encode(['error' => 'Ошибка БД'.$e->getMessage()]);
+    $stmt = $pdo->prepare("SELECT id, name, password, role FROM users WHERE email = :email");
+    $stmt->execute(['email' => $email]);
+  } catch (\PDOException $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Ошибка БД: ' . $e->getMessage()]);
     exit;
   }
   $user = $stmt->fetch();
 
   if (!$user || !password_verify($plainPassword, $user['password'])) {
-//    http_response_code(401); // Unauthorized
-    echo json_encode(['error' => 'Неверный логин / пароль или вы не зарегистрированы в системе']);
+    http_response_code(401); // Unauthorized
+    echo json_encode(['error' => 'Неверный email / пароль или вы не зарегистрированы в системе']);
     exit;
   }
 
-    // Генерируем JWT токен
+  // Обновляем last_visit текущим временем и датой
+  try {
+    $updateStmt = $pdo->prepare("UPDATE users SET last_visit = NOW() WHERE id = :id");
+    $updateStmt->execute(['id' => $user['id']]);
+  } catch (\PDOException $e) {
+    // Логируем ошибку, но не прерываем авторизацию
+    error_log('Ошибка обновления last_visit: ' . $e->getMessage());
+  }
+
+  // Генерируем JWT токен
   $payload = [
-    "iss" => "http://news-analitika.org",
-    "aud" => "http://news-analitika.com",
+    "iss" => "http://nm-master.org",
+    "aud" => "http://nm-master.com",
     "iat" => time(),
-    // "nbf" => time() + 60,
     "exp" => time() + 3600,
     "data" => [
-      "user_id" => $user['user_id'],
-      "login" => $login,
+      "user_id" => $user['id'],
+      "email" => $email,
       "name" => $user['name'],
+      "role" => $user['role'],
     ]
   ];
-  $jwt = JWT::encode($payload, $key,'HS256');
 
-    // Возвращаем токен клиенту
-    http_response_code(200); // OK
-    echo json_encode(['token_data' => $payload,'token' => $jwt]);
+  $jwt = JWT::encode($payload, $key, 'HS256');
+
+  // Возвращаем токен и роль клиенту
+  http_response_code(200); // OK
+  echo json_encode([
+    'token_data' => $payload,
+    'token' => $jwt,
+    'role' => $user['role']
+  ]);
 }
 ?>

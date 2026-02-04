@@ -128,7 +128,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]
         ];
         
-        $key = "";
         $jwt = JWT::encode($payload, $key, 'HS256');
 
         // Возвращаем токен клиенту

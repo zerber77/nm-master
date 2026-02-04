@@ -1,3 +1,5 @@
+import { isTokenExpired } from './tokenExpired.js';
+
 export function initAuthMenu() {
     const slot = document.getElementById('authMenuSlot');
     if (!slot) {
@@ -7,19 +9,39 @@ export function initAuthMenu() {
     }
 
     const token = localStorage.getItem('authToken');
-    if (!token) {
+    
+    // Проверяем наличие токена и его истечение
+    if (!token || isTokenExpired(token)) {
+        // Если токен истек или отсутствует, удаляем его и показываем кнопку входа
+        if (token) {
+            localStorage.removeItem('authToken');
+        }
         slot.classList.remove('dropdown');
         slot.innerHTML = '<a href="/login/" class="nav-link">Войти</a>';
         return;
     }
 
     slot.classList.add('dropdown');
+    
+    // Декодируем токен для получения роли пользователя
+    let userRole = 'user';
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userRole = payload?.data?.role || 'user';
+    } catch (err) {
+        console.error('Ошибка при декодировании токена:', err);
+    }
+    
+    // Определяем ссылку в зависимости от роли
+    const cabinetLink = userRole === 'admin' ? '/master/' : '/cabinet/';
+    const cabinetText = userRole === 'admin' ? 'Панель управления' : 'Личный кабинет';
+    
     slot.innerHTML = `
-        <a href="/cabinet/" class="nav-link dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+        <a href="${cabinetLink}" class="nav-link dropdown-toggle" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-user"></i>
         </a>
         <ul class="dropdown-menu">
-            <li><a href="/cabinet/" class="dropdown-link">Личный кабинет</a></li>
+            <li><a href="${cabinetLink}" class="dropdown-link">${cabinetText}</a></li>
             <li><a href="#" class="dropdown-link" data-action="logout">Выйти</a></li>
         </ul>
     `;

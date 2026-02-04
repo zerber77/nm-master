@@ -1,6 +1,8 @@
 // ========== ИМПОРТЫ ==========
 import { markAsWritten } from './written.js';
 import { deleteRecord } from './delete.js';
+import { isTokenExpired } from '../scripts/tokenExpired.js';
+import { useGet } from '../scripts/axios/axiosGet.js';
 
 // ========== МОДАЛЬНОЕ ОКНО ВХОДА ==========
 function initPassModal() {
@@ -91,6 +93,7 @@ function sendPassword() {
 const API_MAP = {
     orders: '/api/orders/getOrders/',
     messages: '/api/feedback/getFeedback/',
+    users: '/api/users/',
 };
 
 const statusBadge = document.getElementById('statusBadge');
@@ -125,6 +128,74 @@ function sanitizeValue(value) {
     if (value === null || value === undefined) return '';
     if (typeof value === 'string') return value.trim();
     return String(value);
+}
+
+function renderUsersTable(users) {
+    // Проверяем, что данные - массив
+    if (!Array.isArray(users)) {
+        console.error('Данные не являются массивом:', users);
+        return `<div class="empty-state"><i class="fa fa-inbox"></i><p>Ошибка: данные не в формате массива</p><pre>${JSON.stringify(users, null, 2)}</pre></div>`;
+    }
+    
+    if (users.length === 0) {
+        return `<div class="empty-state"><i class="fa fa-inbox"></i><p>Нет пользователей для отображения</p></div>`;
+    }
+
+    // Определяем заголовки таблицы на основе первого пользователя
+    const headers = Object.keys(users[0] || {});
+    
+    if (headers.length === 0) {
+        return `<div class="empty-state"><i class="fa fa-inbox"></i><p>Нет данных для отображения</p></div>`;
+    }
+    
+    // Форматируем заголовки для отображения
+    const formatHeader = (key) => {
+        const headerMap = {
+            id: 'ID',
+            name: 'Имя',
+            email: 'Email',
+            phone: 'Телефон',
+            role: 'Роль',
+            registered: 'Дата регистрации',
+            last_visit: 'Последний визит'
+        };
+        return headerMap[key] || key;
+    };
+
+    // Форматируем значение для отображения
+    const formatValue = (value) => {
+        if (value === null || value === undefined) return '-';
+        if (typeof value === 'string') return value.trim();
+        return String(value);
+    };
+
+    // Создаем строку заголовков
+    const tableHeaders = headers
+        .map(header => `<th>${formatHeader(header)}</th>`)
+        .join('');
+
+    // Создаем строки данных
+    const tableRows = users
+        .map(user => {
+            const cells = headers
+                .map(header => `<td>${formatValue(user[header])}</td>`)
+                .join('');
+            return `<tr>${cells}</tr>`;
+        })
+        .join('');
+
+    return `
+        <div class="table-container">
+            <table class="users-table">
+                <thead>
+                    <tr>${tableHeaders}</tr>
+                </thead>
+                <tbody>
+                    ${tableRows}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
 function renderRecords(records, title, dataType) {
@@ -190,13 +261,21 @@ async function fetchData(type) {
     setContent(renderLoader());
 
     try {
-        const response = await fetch(endpoint, { cache: 'no-cache' });
-        const text = await response.text();
         let data;
-        try {
-            data = JSON.parse(text);
-        } catch (err) {
-            data = text;
+        
+        // Для users используем useGet, для остальных - fetch
+        if (type === 'users') {
+            const { request } = useGet(endpoint);
+            // request() теперь возвращает данные напрямую
+            data = await request();
+        } else {
+            const response = await fetch(endpoint, { cache: 'no-cache' });
+            const text = await response.text();
+            try {
+                data = JSON.parse(text);
+            } catch (err) {
+                data = text;
+            }
         }
 
         if (typeof data === 'string') {
@@ -209,7 +288,26 @@ async function fetchData(type) {
             data = data.data;
         }
 
-        setContent(renderRecords(data, type === 'orders' ? 'Заказ' : 'Сообщение', type));
+        // Для пользователей используем таблицу, для остальных - карточки
+        if (type === 'users') {
+            // Убеждаемся, что данные - массив
+            if (!Array.isArray(data)) {
+                console.error('Данные пользователей не массив:', data);
+                setContent(renderError('Ошибка: данные пользователей не в формате массива'));
+                setStatus('Ошибка');
+                return;
+            }
+            
+            setContent(renderUsersTable(data));
+        } else {
+            // Определяем заголовок для отображения
+            const titleMap = {
+                orders: 'Заказ',
+                messages: 'Сообщение'
+            };
+            const title = titleMap[type] || 'Запись';
+            setContent(renderRecords(data, title, type));
+        }
         setStatus('Готово');
         
         // Инициализируем обработчики кнопок для заказов и сообщений
@@ -220,7 +318,7 @@ async function fetchData(type) {
         }
     } catch (error) {
         console.error(error);
-        setContent(renderError('Не удалось загрузить данные. Проверьте orders.php/messages.php.'));
+        setContent(renderError('Не удалось загрузить данные. Проверьте эндпоинт.'));
         setStatus('Ошибка');
     }
 }
@@ -433,12 +531,58 @@ function initSidebar() {
     mobileOverlay?.addEventListener('click', closeMobileMenu);
 }
 
+// ========== ПРОВЕРКА АВТОРИЗАЦИИ ==========
+function checkAuthAndShowLayout() {
+    const token = localStorage.getItem('authToken');
+    const adminLayout = document.getElementById('adminLayout');
+    
+    // Проверяем наличие токена и его истечение
+    if (!token || isTokenExpired(token)) {
+        // Если токен истек или отсутствует, удаляем его и перенаправляем на главную
+        if (token) {
+            localStorage.removeItem('authToken');
+        }
+        window.location.href = '/';
+        return false;
+    }
+    
+    // Декодируем токен для проверки роли (базовая проверка без верификации подписи)
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userRole = payload?.data?.role;
+        
+        // Проверяем, что пользователь имеет роль admin
+        if (userRole === 'admin') {
+            // Удаляем класс hidden, чтобы показать админ-панель
+            if (adminLayout) {
+                adminLayout.classList.remove('hidden');
+            }
+            return true;
+        } else {
+            // Если не админ, перенаправляем в личный кабинет
+            window.location.href = '/cabinet/index.html';
+            return false;
+        }
+    } catch (err) {
+        console.error('Ошибка при декодировании токена:', err);
+        // Если токен невалидный, перенаправляем на главную
+        localStorage.removeItem('authToken');
+        window.location.href = '/';
+        return false;
+    }
+}
+
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 document.addEventListener('DOMContentLoaded', () => {
+    // Проверяем авторизацию и показываем админ-панель
+    if (!checkAuthAndShowLayout()) {
+        return; // Если авторизация не прошла, не инициализируем панель
+    }
+    
     // Инициализация модального окна для входа
-    initPassModal();
-    window.openPassModal();
-    sendPassword();
+//    initPassModal();
+//    window.openPassModal();
+//    sendPassword();
 
     // Инициализация админ-панели
     initNav();

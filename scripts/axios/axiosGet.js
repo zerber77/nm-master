@@ -13,6 +13,7 @@ export function useGet(url,options={},showLoader =true){
     try {
       const res = await api.get(url)
       response = await res.data
+      return response // Возвращаем данные
     }catch (e) {
       throw e.message
     }

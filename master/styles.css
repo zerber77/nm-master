@@ -491,6 +491,134 @@ body {
     transform: rotate(90deg);
 }
 
+/* ========== ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ ========== */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background: var(--card-bg);
+    margin: 0;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+    font-size: 14px;
+    min-width: 600px;
+}
+
+.users-table thead {
+    background: linear-gradient(180deg, #e9a14e 0%, #ee9128 100%);
+    color: #1f1204;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.users-table thead tr {
+    border-bottom: 3px solid var(--sidebar-border);
+}
+
+.users-table th {
+    padding: 16px 18px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border-right: 1px solid rgba(217, 116, 12, 0.3);
+}
+
+.users-table th:last-child {
+    border-right: none;
+}
+
+.users-table tbody tr {
+    border-bottom: 1px solid #f3cfac;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.users-table tbody tr:hover {
+    background-color: var(--accent-soft);
+    transform: scale(1.01);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.users-table tbody tr:nth-child(even) {
+    background-color: #fffdf9;
+}
+
+.users-table tbody tr:nth-child(even):hover {
+    background-color: var(--accent-soft);
+}
+
+.users-table td {
+    padding: 14px 18px;
+    color: var(--text-main);
+    vertical-align: middle;
+    word-wrap: break-word;
+    max-width: 300px;
+}
+
+.users-table td:first-child {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+/* Стили для длинных текстов */
+.users-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Адаптивные стили для таблицы */
+@media (max-width: 960px) {
+    .table-container {
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .users-table {
+        font-size: 12px;
+        min-width: 500px;
+    }
+
+    .users-table th {
+        padding: 12px 14px;
+        font-size: 12px;
+    }
+
+    .users-table td {
+        padding: 10px 14px;
+        max-width: 200px;
+    }
+
+    .content-body {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 640px) {
+    .users-table {
+        font-size: 11px;
+        min-width: 400px;
+    }
+
+    .users-table th {
+        padding: 10px 12px;
+        font-size: 11px;
+    }
+
+    .users-table td {
+        padding: 8px 12px;
+        max-width: 150px;
+    }
+}
+
 @media (max-width: 960px) {
     .admin-layout {
         grid-template-columns: 72px 1fr;
