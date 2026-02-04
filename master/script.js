@@ -131,22 +131,12 @@ function sanitizeValue(value) {
 }
 
 function renderUsersTable(users) {
-    // Проверяем, что данные - массив
-    if (!Array.isArray(users)) {
-        console.error('Данные не являются массивом:', users);
-        return `<div class="empty-state"><i class="fa fa-inbox"></i><p>Ошибка: данные не в формате массива</p><pre>${JSON.stringify(users, null, 2)}</pre></div>`;
-    }
-    
-    if (users.length === 0) {
+    if (!Array.isArray(users) || users.length === 0) {
         return `<div class="empty-state"><i class="fa fa-inbox"></i><p>Нет пользователей для отображения</p></div>`;
     }
 
     // Определяем заголовки таблицы на основе первого пользователя
     const headers = Object.keys(users[0] || {});
-    
-    if (headers.length === 0) {
-        return `<div class="empty-state"><i class="fa fa-inbox"></i><p>Нет данных для отображения</p></div>`;
-    }
     
     // Форматируем заголовки для отображения
     const formatHeader = (key) => {
@@ -266,7 +256,6 @@ async function fetchData(type) {
         // Для users используем useGet, для остальных - fetch
         if (type === 'users') {
             const { request } = useGet(endpoint);
-            // request() теперь возвращает данные напрямую
             data = await request();
         } else {
             const response = await fetch(endpoint, { cache: 'no-cache' });
@@ -290,14 +279,6 @@ async function fetchData(type) {
 
         // Для пользователей используем таблицу, для остальных - карточки
         if (type === 'users') {
-            // Убеждаемся, что данные - массив
-            if (!Array.isArray(data)) {
-                console.error('Данные пользователей не массив:', data);
-                setContent(renderError('Ошибка: данные пользователей не в формате массива'));
-                setStatus('Ошибка');
-                return;
-            }
-            
             setContent(renderUsersTable(data));
         } else {
             // Определяем заголовок для отображения
