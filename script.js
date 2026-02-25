@@ -19,20 +19,20 @@ function initHeaderInteractions() {
         const dropdownToggle = dropdown.querySelector('.dropdown-toggle');
         if (!dropdownToggle) return;
         dropdownToggle.addEventListener('click', (e) => {
-            // На мобильных устройствах предотвращаем переход по ссылке и открываем меню
-            if (window.innerWidth <= 768) {
+            // В мобильной версии (как в медиа-запросе 885px) — раскрытие по клику
+            if (window.innerWidth <= 885) {
                 e.preventDefault();
-                e.stopPropagation(); // Предотвращаем всплытие события к обработчику navLinks
+                e.stopPropagation();
                 dropdown.classList.toggle('active');
             }
         });
 
-        // Предотвращаем закрытие dropdown при клике внутри dropdown-menu на мобильных
+        // Предотвращаем закрытие dropdown при клике внутри подменю на мобильных
         const dropdownMenu = dropdown.querySelector('.dropdown-menu');
         if (dropdownMenu) {
             dropdownMenu.addEventListener('click', (e) => {
-                if (window.innerWidth <= 768) {
-                    e.stopPropagation(); // Предотвращаем всплытие события
+                if (window.innerWidth <= 885) {
+                    e.stopPropagation();
                 }
             });
         }
@@ -40,9 +40,9 @@ function initHeaderInteractions() {
     
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            // На мобильных устройствах не закрываем меню при клике на dropdown-toggle
-            if (window.innerWidth <= 768 && link.classList.contains('dropdown-toggle')) {
-                return; // Позволяем обработчику dropdown-toggle обработать клик
+            // В мобильной версии не закрываем меню при клике на dropdown-toggle
+            if (window.innerWidth <= 885 && link.classList.contains('dropdown-toggle')) {
+                return;
             }
             if (hamburger && navMenu) {
                 hamburger.classList.remove('active');
