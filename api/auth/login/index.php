@@ -1,33 +1,28 @@
 <?php
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-
-// // Обработка preflight запроса для CORS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+// Подключаем централизованную обработку CORS
+require_once("../../cors.php");
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 require("../Firebase/JWT.php");
 require("../Firebase/Key.php");
-// Конфигурация подключения к БД
-include("../../const.php");
 
-$options = [
-  PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-  PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-];
+// Подключаем класс Database для централизованного подключения к БД
+require_once("../../Database.php");
 
+// Получаем подключение к базе данных
 try {
-      $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, $options);
+    $database = Database::getInstance();
+    $pdo = $database->getConnection();
 } catch (\PDOException $e) {
-  throw new \PDOException($e->getMessage(), (int)$e->getCode());
+    http_response_code(500);
+    echo json_encode(['error' => 'Ошибка подключения к базе данных']);
+    exit;
 }
+
+// Получаем JWT ключ из конфигурации
+include("../../const.php");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   // Получаем JSON данные из POST запроса
@@ -69,28 +64,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     error_log('Ошибка обновления last_visit: ' . $e->getMessage());
   }
 
-  // Генерируем JWT токен
-  $payload = [
-    "iss" => "http://nm-master.org",
-    "aud" => "http://nm-master.com",
-    "iat" => time(),
-    "exp" => time() + 3600,
-    "data" => [
-      "user_id" => $user['id'],
-      "email" => $email,
-      "name" => $user['name'],
-      "role" => $user['role'],
-    ]
-  ];
+  // Генерируем JWT токен с обработкой ошибок
+  try {
+    // Получаем настройки из переменных окружения или используем значения по умолчанию
+    $appUrl = getenv('APP_URL') ?: "http://nm-master.org";
+    $jwtExpiration = (int)(getenv('JWT_EXPIRATION') ?: 86400); // 24 часа по умолчанию
+    
+    $payload = [
+      "iss" => $appUrl,
+      "aud" => $appUrl,
+      "iat" => time(),
+      "exp" => time() + $jwtExpiration,
+      "data" => [
+        "user_id" => $user['id'],
+        "email" => $email,
+        "name" => $user['name'],
+        "role" => $user['role'],
+      ]
+    ];
+    
+    // Проверяем наличие ключа перед кодированием
+    if (empty($key)) {
+      throw new \Exception('JWT секретный ключ не установлен');
+    }
+    
+    $jwt = JWT::encode($payload, $key, 'HS256');
 
-  $jwt = JWT::encode($payload, $key, 'HS256');
-
-  // Возвращаем токен и роль клиенту
-  http_response_code(200); // OK
-  echo json_encode([
-    'token_data' => $payload,
-    'token' => $jwt,
-    'role' => $user['role']
-  ]);
+    // Возвращаем токен и роль клиенту
+    http_response_code(200); // OK
+    echo json_encode([
+      'token' => $jwt,
+      'role' => $user['role'],
+      'user' => [
+        'id' => $user['id'],
+        'name' => $user['name'],
+        'email' => $email
+      ]
+    ]);
+  } catch (\Firebase\JWT\Exception $e) {
+    // Ошибка библиотеки JWT
+    error_log('JWT encoding error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Ошибка генерации токена авторизации']);
+    exit;
+  } catch (\Exception $e) {
+    // Общая ошибка при генерации токена
+    error_log('Token generation error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Ошибка сервера при генерации токена']);
+    exit;
+  }
 }
 ?>

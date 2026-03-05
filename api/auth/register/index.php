@@ -1,14 +1,6 @@
 <?php
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-
-// // Обработка preflight запроса для CORS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+// Подключаем централизованную обработку CORS
+require_once("../../cors.php");
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -16,20 +8,21 @@ use Firebase\JWT\Key;
 require("../Firebase/JWT.php");
 require("../Firebase/Key.php");
 
-include("../../const.php");
+// Подключаем класс Database для централизованного подключения к БД
+require_once("../../Database.php");
 
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-];
-
+// Получаем подключение к базе данных
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4", $user, $pass, $options);
+    $database = Database::getInstance();
+    $pdo = $database->getConnection();
 } catch (\PDOException $e) {
     http_response_code(500);
     echo json_encode(['error' => 'Ошибка подключения к базе данных']);
     exit;
 }
+
+// Получаем JWT ключ из конфигурации
+include("../../const.php");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Получаем JSON данные из POST запроса
@@ -57,6 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = trim($user['phone']);
     $password = $user['password'];
 
+    // Нормализация телефона: оставляем только + и цифры (убираем пробелы, дефисы, скобки)
+    $phoneNormalized = preg_replace('/[\s\-\(\)]/u', '', $phone);
+
     // Валидация данных
     if (empty($name) || strlen($name) < 2) {
         http_response_code(400);
@@ -70,11 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if (empty($phone) || strlen($password) < 6){
+    // Валидация телефона (после нормализации: +7-442-323-44-99 → +74423234499)
+    if (empty($phone) || !preg_match('/^\+?[0-9]{10,15}$/', $phoneNormalized)) {
         http_response_code(400);
         echo json_encode(['error' => 'Неверный формат номера телефона']);
         exit;
     }
+    $phone = $phoneNormalized;
 
     if (empty($password) || strlen($password) < 6) {
         http_response_code(400);
@@ -114,33 +112,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Получаем ID созданного пользователя
         $userId = $pdo->lastInsertId();
 
-        // Генерируем JWT токен
-        $payload = [
-            "iss" => "http://nm-master.org",
-            "aud" => "http://nm-master.com",
-            "iat" => time(),
-            "exp" => time() + 3600, // Токен действителен 1 час
-            "data" => [
-                "user_id" => $userId,
-                "email" => $email,
-                "phone" => $phone,
-                "name" => $name,
-            ]
-        ];
-        
-        $jwt = JWT::encode($payload, $key, 'HS256');
+        // Генерируем JWT токен с обработкой ошибок
+        try {
+            // Получаем настройки из переменных окружения или используем значения по умолчанию
+            $appUrl = getenv('APP_URL') ?: "http://nm-master.org";
+            $jwtExpiration = (int)(getenv('JWT_EXPIRATION') ?: 86400); // 24 часа по умолчанию
+            
+            $payload = [
+                "iss" => $appUrl,
+                "aud" => $appUrl,
+                "iat" => time(),
+                "exp" => time() + $jwtExpiration,
+                "data" => [
+                    "user_id" => $userId,
+                    "email" => $email,
+                    "phone" => $phone,
+                    "name" => $name,
+                ]
+            ];
+            
+            // Проверяем наличие ключа перед кодированием
+            if (empty($key)) {
+                throw new \Exception('JWT секретный ключ не установлен');
+            }
+            
+            $jwt = JWT::encode($payload, $key, 'HS256');
 
-        // Возвращаем токен клиенту
-        http_response_code(201); // Created
-        echo json_encode([
-            'token' => $jwt,
-            'user' => [
-                'id' => $userId,
-                'name' => $name,
-                'email' => $email,
-                "phone" => $phone
-            ]
-        ]);
+            // Возвращаем токен клиенту
+            http_response_code(201); // Created
+            echo json_encode([
+                'token' => $jwt,
+                'user' => [
+                    'id' => $userId,
+                    'name' => $name,
+                    'email' => $email,
+                    "phone" => $phone
+                ]
+            ]);
+        } catch (\Firebase\JWT\Exception $e) {
+            // Ошибка библиотеки JWT
+            error_log('JWT encoding error: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Ошибка генерации токена авторизации']);
+            exit;
+        } catch (\Exception $e) {
+            // Общая ошибка при генерации токена
+            error_log('Token generation error: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Ошибка сервера при генерации токена']);
+            exit;
+        }
     } catch (\PDOException $e) {
         http_response_code(500);
         echo json_encode(['error' => 'Ошибка базы данных: ' . $e->getMessage()]);

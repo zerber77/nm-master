@@ -1,16 +1,22 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-// Настройки подключения
-include __DIR__ . '/../../const.php';
-// Функция быстрой JSON-ответы
-// function respond($success, $msg) {
-//     echo json_encode(['success' => $success, 'message' => $msg]);
-//     exit;
-// }
+
+// Подключаем централизованную обработку CORS
+require_once(__DIR__ . '/../../cors.php');
+
+// Подключаем класс Database для централизованного подключения к БД
+require_once(__DIR__ . '/../../Database.php');
+
+// Подключаем утилитарные функции
+require_once(__DIR__ . '/../../utils.php');
+
+// Получаем подключение к базе данных
+try {
+    $database = Database::getInstance();
+    $pdo = $database->getConnection();
+} catch (\PDOException $e) {
+    respond(false, 'Ошибка подключения к базе данных');
+}
 
 // Функция получения IP-адреса клиента
 function getClientIp() {
@@ -51,39 +57,30 @@ if ($phone !== '' && !preg_match('/^\+7-\d{3}-\d{3}-\d{2}-\d{2}$/', $phone)) {
     respond(false, 'Пожалуйста, введите телефон в формате +7-xxx-xxx-xx-xx');
 }
 
-// Подключение к БД
+try {
+    // Проверка количества сообщений от этого IP за последние 24 часа
+    $maxMessagesPerDay = 5; // Лимит сообщений в сутки
+    $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM feedback WHERE ip_address = :ip_address AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)");
+    $stmt->execute(['ip_address' => $ipAddress]);
+    $row = $stmt->fetch();
+    $messageCount = $row['count'] ?? 0;
 
+    if ($messageCount >= $maxMessagesPerDay) {
+        respond(false, 'Превышен лимит сообщений. Вы можете отправить не более ' . $maxMessagesPerDay . ' сообщений в сутки.');
+    }
 
-// Проверка количества сообщений от этого IP за последние 24 часа
-$maxMessagesPerDay = 5; // Лимит сообщений в сутки
-$stmt = $conn->prepare("SELECT COUNT(*) as count FROM feedback WHERE ip_address = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)");
-if (!$stmt) {
-    respond(false, 'Ошибка подготовки запроса');
-}
-$stmt->bind_param('s', $ipAddress);
-$stmt->execute();
-$result = $stmt->get_result();
-$row = $result->fetch_assoc();
-$messageCount = $row['count'];
-$stmt->close();
+    // Сохраняем сообщение
+    $stmt = $pdo->prepare("INSERT INTO feedback (name, email, phone, message, ip_address, created_at) VALUES (:name, :email, :phone, :message, :ip_address, NOW())");
+    $stmt->execute([
+        'name' => $name,
+        'email' => $email,
+        'phone' => $phone,
+        'message' => $message,
+        'ip_address' => $ipAddress
+    ]);
 
-if ($messageCount >= $maxMessagesPerDay) {
-    $conn->close();
-    respond(false, 'Превышен лимит сообщений. Вы можете отправить не более ' . $maxMessagesPerDay . ' сообщений в сутки.');
-}
-
-// Сохраняем сообщение
-$stmt = $conn->prepare("INSERT INTO feedback (name, email, phone, message, ip_address, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
-if (!$stmt) {
-    respond(false, 'Ошибка подготовки запроса');
-}
-$stmt->bind_param('sssss', $name, $email, $phone, $message, $ipAddress);
-$ok = $stmt->execute();
-$stmt->close();
-$conn->close();
-
-if ($ok) {
     respond(true, 'Спасибо! Ваше сообщение отправлено.');
-} else {
+} catch (\PDOException $e) {
+    error_log('Database error in postFeedback: ' . $e->getMessage());
     respond(false, 'Ошибка при сохранении сообщения.');
 }

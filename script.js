@@ -54,20 +54,22 @@ function initHeaderInteractions() {
     });
     
     // Подсветка активного пункта по текущему пути
-    let path = location.pathname.replace(/\/index\.html$/, '/').replace(/\/$/, '') || '/';
+    const path = location.pathname.replace(/\/index\.html$/, '/').replace(/\/$/, '') || '/';
     navLinks.forEach(a => {
         a.classList.remove('active');
-        const href = a.getAttribute('href') || '';
+        const href = (a.getAttribute('href') || '').trim();
+        // Пустой href (dropdown-переключатель) не считаем страницей — не подсвечиваем на главной
+        if (!href) return;
         const hrefPath = href.replace(/\/$/, '') || '/';
         if (hrefPath === path) {
             a.classList.add('active');
         }
-        // Подсветка пункта "Услуги"
-        if (path.includes('services')) {
-            const servicesToggle = document.querySelector('a.dropdown-toggle[href^="/services/"]');
-            servicesToggle?.classList.add('active');
-        }
     });
+    // Подсветка пункта "Услуги" только когда мы на странице услуг
+    if (path.startsWith('/services')) {
+        const servicesToggle = document.querySelector('a.nav-link.dropdown-toggle');
+        servicesToggle?.classList.add('active');
+    }
     
     // Подсветка активного пункта в dropdown и закрытие меню при клике
     const dropdownLinks = document.querySelectorAll('.dropdown-link');

@@ -1,16 +1,21 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-include __DIR__ . '/../../const.php';
+// Подключаем централизованную обработку CORS
+require_once(__DIR__ . '/../../cors.php');
 
-// Обработка OPTIONS запроса для CORS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
+// Подключаем класс Database для централизованного подключения к БД
+require_once(__DIR__ . '/../../Database.php');
+
+// Подключаем утилитарные функции
+require_once(__DIR__ . '/../../utils.php');
+
+// Получаем подключение к базе данных
+try {
+    $database = Database::getInstance();
+    $pdo = $database->getConnection();
+} catch (\PDOException $e) {
+    respond(false, 'Ошибка подключения к базе данных');
 }
 
 // Проверяем метод запроса
@@ -26,41 +31,29 @@ if ($orderId <= 0) {
     respond(false, 'Неверный ID заказа: ' . (isset($_POST['orderId']) ? $_POST['orderId'] : 'не передан'));
 }
 
-// Сначала проверяем, существует ли заказ
-$checkStmt = $conn->prepare("SELECT id FROM orders WHERE id = ?");
-if (!$checkStmt) {
-    respond(false, 'Ошибка подготовки запроса проверки: ' . $conn->error);
-}
-$checkStmt->bind_param('i', $orderId);
-$checkStmt->execute();
-$result = $checkStmt->get_result();
-$order = $result->fetch_assoc();
-$checkStmt->close();
+try {
+    // Сначала проверяем, существует ли заказ
+    $checkStmt = $pdo->prepare("SELECT id FROM orders WHERE id = :id");
+    $checkStmt->execute(['id' => $orderId]);
+    $order = $checkStmt->fetch();
 
-if (!$order) {
-    respond(false, 'Заказ с ID ' . $orderId . ' не найден в базе данных');
-}
+    if (!$order) {
+        respond(false, 'Заказ с ID ' . $orderId . ' не найден в базе данных');
+    }
 
-// Удаляем заказ
-$stmt = $conn->prepare("DELETE FROM orders WHERE id = ?");
-if (!$stmt) {
-    respond(false, 'Ошибка подготовки запроса удаления: ' . $conn->error);
-}
+    // Удаляем заказ
+    $stmt = $pdo->prepare("DELETE FROM orders WHERE id = :id");
+    $stmt->execute(['id' => $orderId]);
 
-$stmt->bind_param('i', $orderId);
-$ok = $stmt->execute();
+    $affectedRows = $stmt->rowCount();
 
-if (!$ok) {
-    $stmt->close();
-    respond(false, 'Ошибка выполнения запроса: ' . $stmt->error);
-}
-
-$affectedRows = $stmt->affected_rows;
-$stmt->close();
-
-if ($affectedRows > 0) {
-    respond(true, 'Заказ успешно удален');
-} else {
-    // Это не должно произойти, так как мы проверили существование заказа
-    respond(false, 'Заказ не был удален (affected_rows = 0)');
+    if ($affectedRows > 0) {
+        respond(true, 'Заказ успешно удален');
+    } else {
+        // Это не должно произойти, так как мы проверили существование заказа
+        respond(false, 'Заказ не был удален');
+    }
+} catch (\PDOException $e) {
+    error_log('Database error in deleteOrder: ' . $e->getMessage());
+    respond(false, 'Ошибка при удалении заказа: ' . $e->getMessage());
 }

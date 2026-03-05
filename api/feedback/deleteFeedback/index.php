@@ -1,16 +1,21 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-include __DIR__ . '/../../const.php';
+// Подключаем централизованную обработку CORS
+require_once(__DIR__ . '/../../cors.php');
 
-// Обработка OPTIONS запроса для CORS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
+// Подключаем класс Database для централизованного подключения к БД
+require_once(__DIR__ . '/../../Database.php');
+
+// Подключаем утилитарные функции
+require_once(__DIR__ . '/../../utils.php');
+
+// Получаем подключение к базе данных
+try {
+    $database = Database::getInstance();
+    $pdo = $database->getConnection();
+} catch (\PDOException $e) {
+    respond(false, 'Ошибка подключения к базе данных');
 }
 
 // Проверяем метод запроса
@@ -26,41 +31,29 @@ if ($feedbackId <= 0) {
     respond(false, 'Неверный ID сообщения: ' . (isset($_POST['feedbackId']) ? $_POST['feedbackId'] : 'не передан'));
 }
 
-// Сначала проверяем, существует ли сообщение
-$checkStmt = $conn->prepare("SELECT id FROM feedback WHERE id = ?");
-if (!$checkStmt) {
-    respond(false, 'Ошибка подготовки запроса проверки: ' . $conn->error);
-}
-$checkStmt->bind_param('i', $feedbackId);
-$checkStmt->execute();
-$result = $checkStmt->get_result();
-$feedback = $result->fetch_assoc();
-$checkStmt->close();
+try {
+    // Сначала проверяем, существует ли сообщение
+    $checkStmt = $pdo->prepare("SELECT id FROM feedback WHERE id = :id");
+    $checkStmt->execute(['id' => $feedbackId]);
+    $feedback = $checkStmt->fetch();
 
-if (!$feedback) {
-    respond(false, 'Сообщение с ID ' . $feedbackId . ' не найдено в базе данных');
-}
+    if (!$feedback) {
+        respond(false, 'Сообщение с ID ' . $feedbackId . ' не найдено в базе данных');
+    }
 
-// Удаляем сообщение
-$stmt = $conn->prepare("DELETE FROM feedback WHERE id = ?");
-if (!$stmt) {
-    respond(false, 'Ошибка подготовки запроса удаления: ' . $conn->error);
-}
+    // Удаляем сообщение
+    $stmt = $pdo->prepare("DELETE FROM feedback WHERE id = :id");
+    $stmt->execute(['id' => $feedbackId]);
 
-$stmt->bind_param('i', $feedbackId);
-$ok = $stmt->execute();
+    $affectedRows = $stmt->rowCount();
 
-if (!$ok) {
-    $stmt->close();
-    respond(false, 'Ошибка выполнения запроса: ' . $stmt->error);
-}
-
-$affectedRows = $stmt->affected_rows;
-$stmt->close();
-
-if ($affectedRows > 0) {
-    respond(true, 'Сообщение успешно удалено');
-} else {
-    // Это не должно произойти, так как мы проверили существование сообщения
-    respond(false, 'Сообщение не было удалено (affected_rows = 0)');
+    if ($affectedRows > 0) {
+        respond(true, 'Сообщение успешно удалено');
+    } else {
+        // Это не должно произойти, так как мы проверили существование сообщения
+        respond(false, 'Сообщение не было удалено');
+    }
+} catch (\PDOException $e) {
+    error_log('Database error in deleteFeedback: ' . $e->getMessage());
+    respond(false, 'Ошибка при удалении сообщения: ' . $e->getMessage());
 }

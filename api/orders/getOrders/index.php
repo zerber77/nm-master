@@ -1,15 +1,29 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header("Access-Control-Allow-Credentials: true");
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-  //  echo json_encode(['success' => true, 'message' => 'Login successful']);
-include __DIR__ . '/../../const.php';
-$result = mysqli_query($conn, "SELECT * FROM orders ORDER BY created_at DESC");
-$arr = array();
-while ($row = mysqli_fetch_assoc($result)) {
-    $arr[] = $row;
+
+// Подключаем централизованную обработку CORS
+require_once(__DIR__ . '/../../cors.php');
+
+// Подключаем класс Database для централизованного подключения к БД
+require_once(__DIR__ . '/../../Database.php');
+
+// Получаем подключение к базе данных
+try {
+    $database = Database::getInstance();
+    $pdo = $database->getConnection();
+} catch (\PDOException $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Ошибка подключения к базе данных']);
+    exit;
 }
 
-echo json_encode($arr);
+try {
+    $stmt = $pdo->query("SELECT * FROM orders ORDER BY created_at DESC");
+    $arr = $stmt->fetchAll();
+    
+    echo json_encode($arr);
+} catch (\PDOException $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Ошибка выполнения запроса: ' . $e->getMessage()]);
+    exit;
+}
